@@ -15,7 +15,7 @@ import {DEFAULT_BREAKPOINTS_PROVIDER} from '../../media-query/breakpoints/break-
 import {BreakPointRegistry} from '../../media-query/breakpoints/break-point-registry';
 import {MockMatchMedia} from '../../media-query/mock/mock-match-media';
 import {MatchMedia} from '../../media-query/match-media';
-import {ObservableMedia} from '../../media-query/observable-media';
+import {MediaObserver} from '../../media-query/media-observer';
 
 import {customMatchers, expect, NgMatchers} from '../../utils/testing/custom-matchers';
 import {
@@ -247,7 +247,7 @@ class TestHideComponent implements OnInit {
   isHidden = true;
   menuHidden = true;
 
-  constructor(public media: ObservableMedia) {
+  constructor(public media: MediaObserver) {
   }
 
   toggleMenu() {

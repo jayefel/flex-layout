@@ -46,7 +46,7 @@ export function buildMergedBreakPoints(_custom?: BreakPoint[],
   }, options || {});
 
   return () => {
-    // Order so the defaults are loaded last; so ObservableMedia will report these last!
+    // Order so the defaults are loaded last; so MediaObserver will report these last!
     let defaults = (options && options.orientations) ?
       ORIENTATION_BREAKPOINTS.concat(DEFAULT_BREAKPOINTS) : DEFAULT_BREAKPOINTS;
 

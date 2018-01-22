@@ -13,7 +13,7 @@ import {DEFAULT_BREAKPOINTS_PROVIDER} from '../../media-query/breakpoints/break-
 import {BreakPointRegistry} from '../../media-query/breakpoints/break-point-registry';
 import {MatchMedia} from '../../media-query/match-media';
 import {MockMatchMedia} from '../../media-query/mock/mock-match-media';
-import {ObservableMedia} from '../../media-query/observable-media';
+import {MediaObserver} from '../../media-query/media-observer';
 import {FlexLayoutModule} from '../../module';
 
 import {customMatchers} from '../../utils/testing/custom-matchers';
@@ -200,7 +200,7 @@ class TestShowComponent implements OnInit {
   isHidden = false;
   menuOpen = true;
 
-  constructor(public media: ObservableMedia) {
+  constructor(public media: MediaObserver) {
   }
 
   toggleMenu() {
