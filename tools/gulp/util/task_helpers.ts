@@ -56,7 +56,7 @@ export interface ExecTaskOptions {
 /** Create a task that executes a binary as if from the command line. */
 export function execTask(binPath: string, args: string[], options: ExecTaskOptions = {}) {
   return (done: (err?: string) => void) => {
-    const env = Object.assign({}, process.env, options.env);
+    const env = {...process.env, ...options.env};
     const childProcess = child_process.spawn(binPath, args, {env});
     const stderrData: string[] = [];
 

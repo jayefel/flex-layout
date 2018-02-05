@@ -1,56 +1,55 @@
 import {task} from 'gulp';
-import {ngcBuildTask, tsBuildTask, copyTask, execTask} from '../util/task_helpers';
+import {ExecTaskOptions} from '../util/task_helpers';
 import {join} from 'path';
-import {copySync} from 'fs-extra';
 import {buildConfig, sequenceTask} from 'lib-build-tools';
+import * as child_process from 'child_process';
 
-const {outputDir, packagesDir} = buildConfig;
-
-/** Path to the directory where all releases are created. */
-const releasesDir = join(outputDir, 'releases');
-
+const {packagesDir} = buildConfig;
 const appDir = join(packagesDir, 'universal-app');
-const outDir = join(outputDir, 'packages', 'universal-app');
 
-// Paths to the different tsconfig files of the Universal app.
-// Building the sources in the output directory is part of the workaround for
-// https://github.com/angular/angular/issues/12249
-const tsconfigAppPath = join(outDir, 'tsconfig-build.json');
-const tsconfigPrerenderPath = join(outDir, 'tsconfig-prerender.json');
+task('prerender', sequenceTask('prerender:pre', 'prerender:build', 'prerender:clean'));
+task('prerender:pre', sequenceTask('clean', 'flex-layout:build-release', 'prerender:deps'));
 
-/** Path to the compiled prerender file. Running this file just dumps the HTML output for now. */
-const prerenderOutFile = join(outDir, 'prerender.js');
+task('prerender:deps', [], execTask(
+  'npm', ['install'], {env: {cwd: appDir}}
+));
 
-/** Task that builds the universal-app and runs the prerender script. */
-task('prerender', ['universal:build'], execTask(
-  // Runs node with the tsconfig-paths module to alias the @angular/flex-layout dependency.
-  'node', ['-r', 'tsconfig-paths/register', prerenderOutFile], {
-    env: {TS_NODE_PROJECT: tsconfigPrerenderPath},
-    // Errors in lifecycle hooks will write to STDERR, but won't exit the process with an
-    // error code, however we still want to catch those cases in the CI.
-    failOnStderr: true
+/** Task that builds the universal-app in server mode */
+task('prerender:build', execTask(
+  'ng', ['build', '--prod', '--app', '1', '--output-hashing=false'],
+  {env: {cwd: appDir}, failOnStderr: true}
+));
+
+task('prerender:clean', [], execTask(
+  'rm', ['-rf', 'node_modules'], {
+    failOnStderr: true,
+    env: {
+      cwd: appDir
+    }
   }
 ));
 
-task('universal:build', sequenceTask(
-  'clean',
-  ['flex-layout:build-release'],
-  ['universal:copy-release', 'universal:copy-files'],
-  'universal:build-app-ts',
-  'universal:build-prerender-ts'
-));
+function execTask(binPath: string, args: string[], options: ExecTaskOptions = {}) {
+  return (done: (err?: string) => void) => {
+    const childProcess = child_process.spawn(binPath, args, options.env);
+    const stderrData: string[] = [];
 
-/** Task that builds the universal app in the output directory. */
-task('universal:build-app-ts', ngcBuildTask(tsconfigAppPath));
+    if (!options.silentStdout && !options.silent) {
+      childProcess.stdout.on('data', (data: string) => process.stdout.write(data));
+    }
 
-/** Task that copies all files to the output directory. */
-task('universal:copy-files', copyTask(appDir, outDir));
+    if (!options.silent || options.failOnStderr) {
+      childProcess.stderr.on('data', (data: string) => {
+        options.failOnStderr ? stderrData.push(data) : process.stderr.write(data);
+      });
+    }
 
-/** Task that builds the prerender script in the output directory. */
-task('universal:build-prerender-ts', tsBuildTask(tsconfigPrerenderPath));
-
-// As a workaround for https://github.com/angular/angular/issues/12249, we need to
-// copy the Flex-Layout and CDK ESM output inside of the universal-app output.
-task('universal:copy-release', () => {
-  copySync(join(releasesDir, 'flex-layout'), join(outDir, 'flex-layout'));
-});
+    childProcess.on('close', (code: number) => {
+      if (options.failOnStderr && stderrData.length) {
+        done(stderrData.join('\n'));
+      } else {
+        code != 0 ? done(options.errMessage || `Process failed with code ${code}`) : done();
+      }
+    });
+  };
+}

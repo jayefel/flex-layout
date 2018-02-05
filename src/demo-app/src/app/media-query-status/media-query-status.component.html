@@ -1,0 +1,3 @@
+<div class="mqInfo" *ngIf="media$ | async as event">
+  <span title="Active MediaQuery">{{  extractQuery(event) }}</span>
+</div>
